@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -30,8 +31,9 @@ public class PostsFragment extends Fragment {
 
     public static final String TAG = "PostsFragment";
     private RecyclerView rvPosts;
-    private PostsAdapter adapter;
-    private List<Post> allPosts;
+    protected PostsAdapter adapter;
+    protected List<Post> allPosts;
+    private SwipeRefreshLayout swipeContainer;
 
     public PostsFragment() {
         // Required empty public constructor
@@ -54,18 +56,60 @@ public class PostsFragment extends Fragment {
         // 1. Create the adapter
         allPosts = new ArrayList<>();
         adapter = new PostsAdapter(getContext(), allPosts);
-
         // 2. Create the data source
         // 3. Set the adapter on the recycler view
         rvPosts.setAdapter(adapter);
         // 4. Set a Layout Manager on the recycler view
         rvPosts.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        swipeContainer = view.findViewById(R.id.swipeContainer);
+        // Configure the refreshing colors
+        swipeContainer.setColorSchemeResources(android.R.color.holo_blue_bright,
+                android.R.color.holo_green_light,
+                android.R.color.holo_orange_light,
+                android.R.color.holo_red_light);
+
+        swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                // Your code to refresh the list here.
+                // Make sure you call swipeContainer.setRefreshing(false)
+                // once the network request has completed successfully.
+                loadMoreData();
+            }
+        });
+
         queryPosts();
     }
 
-    private void queryPosts() {
+    protected void loadMoreData() {
         ParseQuery<Post> query = ParseQuery.getQuery(Post.class);
         query.include(Post.KEY_USER);
+        query.addDescendingOrder(Post.KEY_CREATED_AT);
+        Log.i("testing ", allPosts.get(0).getUser().getUsername());
+        query.setLimit(20);
+        query.whereGreaterThan(Post.KEY_CREATED_AT, allPosts.get(0).getCreatedAt());
+        query.findInBackground(new FindCallback<Post>() {
+            @Override
+            public void done(List<Post> posts, ParseException e) {
+                if(e!=null){
+                    Log.e(TAG,"Issue with getting posts", e);
+                    return;
+                }
+                for(Post post: posts) {
+                    Log.i(TAG, "Post: " + post.getDescription() + ", username: " + post.getUser().getUsername());
+                }
+                adapter.addAll(posts);
+                swipeContainer.setRefreshing(false);
+            }
+        });
+    }
+
+    protected void queryPosts() {
+        ParseQuery<Post> query = ParseQuery.getQuery(Post.class);
+        query.include(Post.KEY_USER);
+        query.setLimit(20);
+        query.addDescendingOrder(Post.KEY_CREATED_AT);
         query.findInBackground(new FindCallback<Post>() {
             @Override
             public void done(List<Post> posts, ParseException e) {
