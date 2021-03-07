@@ -7,6 +7,14 @@
     android:orientation="vertical"
     tools:context=".LoginActivity">
 
+    <ImageView
+        android:id="@+id/logo"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/logo"
+        android:src="@drawable/nux_dayone_landing_logo_black" />
+
     <EditText
         android:id="@+id/etUsername"
         android:layout_width="match_parent"
